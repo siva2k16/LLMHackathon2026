@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "safequery"
+version = "0.1.0"
+description = "A cost-aware, safety-gated SQL agent post-trained with AgentTune and evaluated with AuditKIT"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Non-commercial research use (see README)" }
+dependencies = []  # the environment, guard, cost gate and scoring are pure standard library
+
+[project.optional-dependencies]
+model = ["transformers>=4.56", "accelerate", "peft", "bitsandbytes", "huggingface_hub", "datasets"]
+
+[tool.setuptools]
+packages = ["safequery"]

@@ -1,0 +1,27 @@
+{
+  "name": "base",
+  "model": "CohereLabs/tiny-aya-global",
+  "adapter": null,
+  "bfcl_simple": {
+    "tool_call_precision_custom_794bf7e6": 0.92,
+    "tool_call_recall_custom_794bf7e6": 0.92,
+    "tool_call_f1_custom_794bf7e6": 0.92,
+    "tool_call_exact_custom_794bf7e6": 0.92
+  },
+  "bfcl_irrelevance": {
+    "tool_call_precision_custom_794bf7e6": 0.16,
+    "tool_call_recall_custom_794bf7e6": 0.16,
+    "tool_call_f1_custom_794bf7e6": 0.16,
+    "tool_call_exact_custom_794bf7e6": 0.16
+  },
+  "arc_challenge": {
+    "acc": 0.15577889447236182
+  },
+  "throughput": {
+    "generated_tokens": 12652,
+    "prompt_tokens": 208801,
+    "generation_seconds": 1447.3,
+    "tokens_per_sec": 8.74,
+    "model_calls": 400
+  }
+}
