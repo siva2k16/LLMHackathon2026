@@ -158,6 +158,20 @@ python scripts/roi_report.py --run results/sft --closed-in 3.0 --closed-out 15.0
 
 **Reproducibility notes:** database seed 7, task seeds 1 (train) / 2 (test); the notebook checks rebuilt task files by md5; BFCL pinned to revision `61fc0608`; greedy decoding for evaluation; the AuditKIT cache is cleared per model and `model_calls > 0` is asserted. AgentTune and AuditKIT are used **unmodified**. Versions used: torch 2.11, transformers 5.22, trl 1.7, peft 0.21, Python ≥ 3.12.
 
+### Serving contract (part of the reported system)
+All reported numbers, both task metrics and BFCL/ARC, describe **adapter + this serving wrapper** (`safequery/policies.py`, `HFPolicy`), not the adapter on its own:
+
+| Setting | Value |
+|---|---|
+| Base model + adapter | `CohereLabs/tiny-aya-global` + the SFT or GRPO LoRA, bf16 |
+| Prompt | AgentTune's Tiny Aya tool-calling template (`safequery/prompts.py`), the same as in training |
+| Decoding | greedy (`do_sample=False`); `max_new_tokens` 320 per agent turn, 256 for BFCL, 16 for ARC; at most 4 turns per episode |
+| Stop tokens | tokenizer EOS + generation-config EOS + `<|END_OF_TURN_TOKEN|>`, `<|END_RESPONSE|>`, `<|END_ACTION|>` |
+| Stop string | `"Tool result for"` |
+| Post-processing | `trim_turn()`: cut at an invented tool result and keep only the first tool-call JSON |
+
+**Why it matters:** output handling changes measured behaviour without any training. In Run 3, the same kind of SFT adapter without the stop tokens and `trim_turn()` produced **16.7% invalid tool calls**; with them, 0%. If you serve the published adapter through a different wrapper (plain `generate()`, vLLM, TGI), apply the same stop tokens, stop string and trimming, or expect different numbers.
+
 ### Repository layout
 | Path | Contents |
 |---|---|
