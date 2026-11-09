@@ -1,0 +1,27 @@
+{
+  "name": "sft",
+  "model": "CohereLabs/tiny-aya-global",
+  "adapter": "runs/sft",
+  "bfcl_simple": {
+    "tool_call_precision_custom_794bf7e6": 0.235,
+    "tool_call_recall_custom_794bf7e6": 0.24,
+    "tool_call_f1_custom_794bf7e6": 0.2366666666666667,
+    "tool_call_exact_custom_794bf7e6": 0.23
+  },
+  "bfcl_irrelevance": {
+    "tool_call_precision_custom_794bf7e6": 0.37,
+    "tool_call_recall_custom_794bf7e6": 0.37,
+    "tool_call_f1_custom_794bf7e6": 0.37,
+    "tool_call_exact_custom_794bf7e6": 0.37
+  },
+  "arc_challenge": {
+    "acc": 0.1507537688442211
+  },
+  "throughput": {
+    "generated_tokens": 12313,
+    "prompt_tokens": 208801,
+    "generation_seconds": 2051.4,
+    "tokens_per_sec": 6.0,
+    "model_calls": 400
+  }
+}
