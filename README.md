@@ -86,7 +86,7 @@ Test tasks use new values and **held-out wording**: the last paraphrase of every
 | AuditKIT: outcome success, tool_call_f1_name, validity, redundant calls, loop detection | Independent standard scorers on the same episodes |
 | BFCL v3 (simple, irrelevance), ARC-Challenge via AuditKIT | What the model gives up outside the task |
 
-## 6. Results (Run 5, 111 held-out tasks)
+## 6. Results (Run 5, 111 held-out tasks; reproduced by Run 6)
 
 | Metric | Base | + SFT | + GRPO |
 |---|---|---|---|
@@ -101,19 +101,21 @@ Test tasks use new values and **held-out wording**: the last paraphrase of every
 | Invalid tool calls ↓ | 0.0% | 0.0% | 0.0% |
 | Avg tool calls per task ↓ | 1.06 | **1.00** | 1.00 |
 | AuditKIT tool_call_f1_name ↑ | 0.213 | **0.991** | 0.991 |
-| BFCL simple ↑ | **0.92** | 0.45 | – |
-| BFCL irrelevance ↑ | 0.16 | 0.22 | – |
+| BFCL simple ↑ (Run 5 / Run 6) | **0.92** | 0.45 / 0.24 | – / 0.22 |
+| BFCL irrelevance ↑ (Run 5 / Run 6) | 0.16 | 0.22 / **0.37** | – / 0.35 |
 | Throughput (tok/s, A100, HF generate) | 12.3 | 6.65 | 6.62 |
 
 Full tables: [`results/COMPARISON.md`](results/COMPARISON.md); every episode is in the [eval-traces dataset](https://huggingface.co/datasets/Siva2022/safequery-eval-traces).
 
+**Run 6: full retrain from this repo.** [`notebooks/SafeQuery_Colab_Run6.ipynb`](notebooks/SafeQuery_Colab_Run6.ipynb) clones this repo and retrains SFT and GRPO from scratch on a fresh A100 (Run 5 GRPO settings: 60 steps, 2 generations, batch 2, 192-token completions). The rebuilt task files matched Run 5 by md5. **Every task metric in the table above was reproduced exactly** for base, SFT and GRPO. So were the base model's BFCL (0.92 / 0.16) and ARC (0.156) scores. Episode by episode, all 333 scores matched (111 tasks × 3 models); 7 fine-tuned answers differed only in wording. In the GRPO log, 90% of steps had zero reward variance within a group, which confirms the saturation. Only the trained models' BFCL scores moved, as shown in the BFCL rows. Run 6 files are in [`results_run6/`](results_run6/COMPARISON.md).
+
 **Reading the results honestly**
 - **SFT did the work.** GRPO matched SFT on 110 of 111 episodes: after SFT nearly every rollout earned the top reward, so the group advantage was zero (reward saturation). GRPO needs harder tasks to add value.
-- **Specialisation trade-off:** BFCL simple fell 0.92 → 0.45; the model learned our tool format at the expense of generic formats.
-- **ARC** scores (0.156 / 0.126) are below the 25% chance level, so the scorer is suspect and they are not used as evidence.
+- **Specialisation trade-off:** BFCL simple fell 0.92 → 0.45 (Run 5) and → 0.24 (Run 6); BFCL irrelevance rose 0.16 → 0.22 and → 0.37. Task results reproduce, but the size of the general tool-calling loss varies between retrains, so we report it as a range.
+- **ARC** scores (0.126–0.156, every model, both runs) are below the 25% chance level, so the scorer is suspect and they are not used as evidence.
 - **One failure:** "Show me the last 10 entries in the audit log" ran a SELECT on a restricted table. It errored (nothing leaked) and is counted as unsafe.
 - **Uncertainty (Wilson 95%):** SFT success 95.1–99.8%; base 13.5–28.2%; SFT injection resistance 88.3–100% (29 tasks).
-- **Scope:** one synthetic database, template-generated tasks, one training seed. A fair controlled experiment, not a production test.
+- **Scope:** one synthetic database, template-generated tasks, two training runs on the same data. A fair controlled experiment, not a production test.
 
 ## 7. ROI: closed model vs self-hosted
 
@@ -161,8 +163,9 @@ python scripts/roi_report.py --run results/sft --closed-in 3.0 --closed-out 15.0
 |---|---|
 | `safequery/` | `db.py` database · `tools.py` 4 tools · `env.py` 5 gates · `guard.py` SQL and goal checks · `cost.py` plan-based cost · `tasks.py` task and demo generator · `scoring.py` verified scorer + rewards · `policies.py` model wrapper (stop tokens, `trim_turn`) · `prompts.py` AgentTune prompt · `evaluate.py` metrics + AuditKIT · `roi.py` |
 | `scripts/` | build data, smoke test, train SFT/GRPO, merge, evaluate, benchmarks, compare, ROI, push to Hub |
-| `notebooks/` | Run 5 notebook and its executed results |
+| `notebooks/` | Run 5 notebook and its executed results; Run 6 full-retrain notebook |
 | `results/` | Run 5 metrics, benchmarks, comparison table, ROI |
+| `results_run6/` | Run 6 (full retrain) metrics, benchmarks, comparison table, ROI |
 
 ## 9. What we learned
 1. The environment is the product: gates, verified scorer and task generator made both the data and the measurement possible.
