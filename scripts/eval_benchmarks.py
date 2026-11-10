@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 
 from safequery.config import DEFAULT_MODEL
+from safequery.serving import provenance, with_ids
 
 BFCL_REPO = "gorilla-llm/Berkeley-Function-Calling-Leaderboard"
 BFCL_REVISION = "61fc0608cfd831fcfbbaa676ebdfef0ed963eeda"  # pinned, as in AuditKIT's docs
@@ -23,7 +24,7 @@ BFCL_REVISION = "61fc0608cfd831fcfbbaa676ebdfef0ed963eeda"  # pinned, as in Audi
 ARC_INSTRUCTION = "\n\nReply with only the number of the correct option."
 
 
-def make_callable(model_id, adapter, load_4bit, max_new_tokens):
+def make_callable(model_id, adapter, load_4bit, max_new_tokens, wrapper="safequery"):
     """AuditKIT accepts any list[str] -> list[str] callable; we wrap our HF policy.
 
     The callable is wrapped in a named CallableModel: AuditKIT's disk cache is keyed on the
@@ -33,7 +34,7 @@ def make_callable(model_id, adapter, load_4bit, max_new_tokens):
     from auditkit.model import CallableModel
     from safequery.policies import HFPolicy
 
-    pol = HFPolicy(model_id, adapter=adapter, load_4bit=load_4bit, max_new_tokens=max_new_tokens)
+    pol = HFPolicy(model_id, adapter=adapter, load_4bit=load_4bit, max_new_tokens=max_new_tokens, wrapper=wrapper)
 
     def generate(prompts):
         pol.max_new_tokens = max_new_tokens
@@ -64,12 +65,16 @@ def main():
     ap.add_argument("--bfcl-limit", type=int, default=100)
     ap.add_argument("--arc-limit", type=int, default=200)
     ap.add_argument("--results", default="results")
+    ap.add_argument("--wrapper", choices=("safequery", "plain"), default="safequery",
+                    help="safequery = the reported serving settings; plain = bare generate()")
+    ap.add_argument("--adapter-source", default=None, help="where the adapter came from, recorded in provenance")
     args = ap.parse_args()
 
     import auditkit as ak
     from huggingface_hub import snapshot_download
 
-    gen, gen_choice, pol = make_callable(args.model, args.adapter, args.load_4bit, max_new_tokens=256)
+    gen, gen_choice, pol = make_callable(args.model, args.adapter, args.load_4bit, max_new_tokens=256,
+                                         wrapper=args.wrapper)
     out: dict = {"name": args.name, "model": args.model, "adapter": args.adapter}
 
     root = snapshot_download(BFCL_REPO, repo_type="dataset", revision=BFCL_REVISION)
@@ -91,9 +96,15 @@ def main():
         print(f"[arc] n={len(samples)} {res.headline}")
 
     out["throughput"] = pol.throughput()
+    out["serving"] = with_ids(pol.serving_config(max_new_tokens={"bfcl": 256, "arc": 16}))
+    out["provenance"] = provenance(args.adapter, args.adapter_source, None, _bootstrap.ROOT)
+    out["wrapper_stats"] = pol.wrapper_stats()
     path = Path(args.results) / args.name
     path.mkdir(parents=True, exist_ok=True)
     (path / "benchmarks.json").write_text(json.dumps(out, indent=2, default=str))
+    with open(path / "raw_turns_benchmarks.jsonl", "w", encoding="utf-8") as f:
+        for r in pol.raw_log:
+            f.write(json.dumps({"serving_id": out["serving"]["serving_id"], **r}, ensure_ascii=False) + "\n")
     print(f"[saved] {path / 'benchmarks.json'}")
 
 

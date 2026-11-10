@@ -191,6 +191,14 @@ HEADLINE = [
 ]
 
 
+WRAPPER_ROWS = [
+    ("success_without_intervention_rate", "Task success, no wrapper intervention ↑"),
+    ("successes_needing_wrapper", "Successes that needed the wrapper (count)"),
+    ("raw_overrun_rate", "Raw overrun, before trimming (turns) ↓"),
+    ("episodes_needing_wrapper_rate", "Episodes where the wrapper intervened"),
+]
+
+
 def comparison_table(runs: list[dict]) -> str:
     """Markdown table: one column per run (metrics.json payloads)."""
     head = "| Metric | " + " | ".join(r["name"] for r in runs) + " |\n"
@@ -207,6 +215,17 @@ def comparison_table(runs: list[dict]) -> str:
             else:
                 cells.append(f"{100 * v:.1f}%")
         lines.append(f"| {label} {'↑' if higher else '↓'} | " + " | ".join(cells) + " |")
+    # raw behaviour before trimming, next to the trimmed score (results from Run 9 on)
+    if any(r.get("wrapper_report") for r in runs):
+        for key, label in WRAPPER_ROWS:
+            cells = []
+            for r in runs:
+                v = (r.get("wrapper_report") or {}).get(key)
+                cells.append("-" if v is None else (str(v) if isinstance(v, int) else f"{100 * v:.1f}%"))
+            lines.append(f"| {label} | " + " | ".join(cells) + " |")
+    if any(r.get("serving") for r in runs):
+        lines.append("| serving_id | " + " | ".join(f"`{(r.get('serving') or {}).get('serving_id', '-')}`"
+                                                    for r in runs) + " |")
     ak_keys = sorted({k for r in runs for k in (r.get("auditkit") or {})})
     for k in ak_keys:
         cells = []

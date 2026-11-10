@@ -172,12 +172,21 @@ All reported numbers, both task metrics and BFCL/ARC, describe **adapter + this 
 
 **Why it matters:** output handling changes measured behaviour without any training. In Run 3, the same kind of SFT adapter without the stop tokens and `trim_turn()` produced **16.7% invalid tool calls**; with them, 0%. If you serve the published adapter through a different wrapper (plain `generate()`, vLLM, TGI), apply the same stop tokens, stop string and trimming, or expect different numbers.
 
+**Recorded with every result (from Run 9 on).** Runs 5 and 6 used exactly the settings above but predate this recording. From Run 9 on:
+- `metrics.json` and `benchmarks.json` carry a `serving` block, grouped as `adapter` / `decoding` / `prompt` / `post_processing` / `versions`. It has a `serving_id` and one hash per group, plus a `provenance` block (code commit, adapter weight hash, adapter source, test-set hash).
+- A `wrapper_report` puts the reported (trimmed) score next to the raw behaviour before trimming: the raw overrun rate, the stop reasons, how many successes needed the wrapper, and task success with no wrapper intervention.
+- `raw_turns.jsonl` keeps every turn before and after trimming.
+- `scripts/explain_diff.py A B` names which group changed between two results files: adapter, decoding, prompt or post-processing.
+- `scripts/serving_report.py` builds the model-alone vs model + wrapper table (`--wrapper plain` = bare `generate()`).
+
+The Run 9 notebook (`notebooks/SafeQuery_Colab_Run9.ipynb`, no training, reuses the Run 6 adapters) produces these files. Its results are pending.
+
 ### Repository layout
 | Path | Contents |
 |---|---|
-| `safequery/` | `db.py` database · `tools.py` 4 tools · `env.py` 5 gates · `guard.py` SQL and goal checks · `cost.py` plan-based cost · `tasks.py` task and demo generator · `scoring.py` verified scorer + rewards · `policies.py` model wrapper (stop tokens, `trim_turn`) · `prompts.py` AgentTune prompt · `evaluate.py` metrics + AuditKIT · `roi.py` |
+| `safequery/` | `db.py` database · `tools.py` 4 tools · `env.py` 5 gates · `guard.py` SQL and goal checks · `cost.py` plan-based cost · `tasks.py` task and demo generator · `scoring.py` verified scorer + rewards · `policies.py` model wrapper (stop tokens, `trim_turn`) · `prompts.py` AgentTune prompt · `evaluate.py` metrics + AuditKIT · `serving.py` serving identity, raw-vs-trimmed report, result diff · `roi.py` |
 | `scripts/` | build data, smoke test, train SFT/GRPO, merge, evaluate, benchmarks, compare, ROI, push to Hub |
-| `notebooks/` | Run 5 notebook and its executed results; Run 6 full-retrain notebook |
+| `notebooks/` | Run 5 notebook and its executed results; Run 6 full-retrain notebook; Run 9 serving-identity notebook (no training) |
 | `results/` | Run 5 metrics, benchmarks, comparison table, ROI |
 | `results_run6/` | Run 6 (full retrain) metrics, benchmarks, comparison table, ROI |
 
